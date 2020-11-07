@@ -135,6 +135,10 @@ public class Matrix {
 		return true;
 	}
 	
+	/**
+	 * 按方格节点的拥有的分支节点数量进行分组
+	 * @return
+	 */
 	public Map<Integer,List<Cube>> groupCube(){
 		return Arrays.stream(cubes).filter(cube->cube.val==0)
 				.collect(Collectors.groupingBy(cube->cube.candidates.size()));
@@ -178,7 +182,6 @@ public class Matrix {
 	public String toString() {
 		StringBuilder buffer=new StringBuilder();
 		for(CubeGroup group:rows) {
-//			buffer.append(Arrays.toString(group.cubes)).append("\n");
 			buffer.append("[");
 			for(Cube c:group.cubes) {
 				if(c.val<10)
