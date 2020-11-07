@@ -1,6 +1,7 @@
 package zz.qihua.sdk;
 
-import java.util.LinkedList;
+import java.util.Arrays;
+import java.util.IntSummaryStatistics;
 
 public class CubeGroup {
 	Cube[] cubes;
@@ -35,5 +36,23 @@ public class CubeGroup {
 	
 	public Cube getCube(int index) {
 		return cubes[index];
+	}
+	
+	public boolean SDKGroup(boolean ignoreZero) {
+		if(ignoreZero) {
+			int[] testArray=new int[cubes.length];
+			for(int i=0;i<cubes.length;i++) {
+				int index=cubes[i].val-1;
+				testArray[index]++;
+				if(testArray[index]>1)
+					return false;
+			}
+		}else {
+			IntSummaryStatistics statitics=Arrays.stream(cubes).mapToInt(c->c.val).distinct().summaryStatistics();
+			if(statitics.getCount()!=cubes.length||statitics.getMax()>cubes.length||statitics.getMin()<1)
+				return false;
+		}
+		
+		return true;
 	}
 }

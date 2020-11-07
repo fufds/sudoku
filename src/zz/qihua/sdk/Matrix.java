@@ -7,7 +7,15 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
+import java.util.PrimitiveIterator.OfInt;
+import java.util.Random;
+import java.util.function.IntFunction;
+import java.util.function.IntSupplier;
+import java.util.function.IntUnaryOperator;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class Matrix {
 	int d;
@@ -19,7 +27,28 @@ public class Matrix {
 	int[] raw;
 	
 	public Matrix(int[][] initRows) {
-		len=initRows.length;
+		int l=initRows.length;
+		d=(int)Math.sqrt(l);
+		raw=new int[l] ;
+		for(int i=0;i<l;i++) {
+			raw[i]=i+1;
+		}
+		Cube[] initCubes=new Cube[l*l];
+		for(int i=0;i<l;i++) {
+			for(int j=0;j<l;j++) {
+				int index=i*l+j;
+				initCubes[index]=new Cube(i, j, i/d*d+j/d, initRows[i][j],raw);
+			}
+		}
+		init(initCubes);
+
+	}
+	private Matrix() {
+		// TODO Auto-generated constructor stub
+	}
+	private void init(Cube[] initCubes) {
+		cubes=initCubes;
+		len=(int)Math.sqrt(initCubes.length);
 		rows=new CubeGroup[len];
 		columns=new CubeGroup[len];
 		blocks=new CubeGroup[len];
@@ -28,16 +57,11 @@ public class Matrix {
 			columns[i]=new CubeGroup(len);
 			blocks[i]=new CubeGroup(len);
 		}
-		raw=new int[len] ;
-		for(int i=0;i<len;i++) {
-			raw[i]=i+1;
-		}
+		
 		d=(int)Math.sqrt(len);
-		cubes=new Cube[len*len];
 		for(int i=0;i<len;i++) {
 			for(int j=0;j<len;j++) {
 				int index=i*len+j;
-				cubes[index]=new Cube(i, j, i/d*d+j/d, initRows[i][j],raw);
 				rows[i].cubes[j]=cubes[index];
 				columns[j].cubes[i]=cubes[index];
 				blocks[i/d*d+j/d].cubes[i%d*d+j%d]=cubes[index];
@@ -58,17 +82,37 @@ public class Matrix {
 				if(c.val>0)
 					list.remove(new Integer(c.val));			
 		}
-//		System.out.println("end");
+	}
+	public static Matrix genMatrix(int dimension,boolean initblock) {
+		int length=dimension*dimension;
+		int[][] initRows=new int[length][length];
+		if(initblock) {
+			for(int block=0;block<length;block++) {
+				OfInt intIterator=IntStream.rangeClosed(1, length).unordered().iterator();
+				for(int index=0;index<length;index++) {
+					int i=index/dimension+block%dimension*dimension;
+					int j=index%dimension+block%dimension*dimension;
+					initRows[i][j]=intIterator.nextInt();
+				}
+			}
+		}
+		
+		return new Matrix(initRows);
 	}
 	
 	public Matrix clone() {
-		int[][] initRows=new int[len][len];
-		for(int i=0;i<len;i++) {
-			for(int j=0;j<len;j++) {
-				initRows[i][j]=cubes[i*len+j].val;
+		Matrix copy=new Matrix();
+		Cube[] initCubes=new Cube[cubes.length];
+		for(int i=0;i<cubes.length;i++) {
+			if(cubes[i].val>0) {
+				initCubes[i]=cubes[i];
+			}else {
+				initCubes[i]=new Cube(cubes[i].rowIndex,cubes[i].colIndex,cubes[i].blockIndex,cubes[i].val,raw);
 			}
 		}
-		return new Matrix(initRows);
+		copy.raw=raw;
+		copy.init(initCubes);
+		return copy;
 	}
 	
 	/**
@@ -125,26 +169,10 @@ public class Matrix {
 	}
 	
 	public boolean SDKMatrix() {
-		IntSummaryStatistics expect=Arrays.stream(raw).summaryStatistics();
-		for(CubeGroup group:rows) {
-			if(!validation(group, expect))
-				return false;
-		}
-		for(CubeGroup group:columns) {
-			if(!validation(group, expect))
-				return false;
-		}
-		for(CubeGroup group:blocks) {
-			if(!validation(group, expect))
-				return false;
-		}
-		return true;
+		return Stream.concat(Stream.concat(Arrays.stream(rows), Arrays.stream(columns)),Arrays.stream(blocks)).
+				allMatch(g->g.SDKGroup(false));
 	}
 	
-	private boolean validation(CubeGroup group,IntSummaryStatistics expect) {
-		IntSummaryStatistics statistics=Arrays.stream(group.cubes).mapToInt(cube->cube.val).summaryStatistics();
-		return statistics.toString().equals(expect.toString());
-	}
 	
 	@Override
 	public String toString() {
@@ -153,6 +181,8 @@ public class Matrix {
 //			buffer.append(Arrays.toString(group.cubes)).append("\n");
 			buffer.append("[");
 			for(Cube c:group.cubes) {
+				if(c.val<10)
+					buffer.append(0);
 				buffer.append(c.val).append(",");
 			}
 			buffer.deleteCharAt(buffer.length()-1).append("]").append("\n");
