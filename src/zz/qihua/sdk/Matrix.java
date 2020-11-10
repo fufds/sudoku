@@ -87,8 +87,10 @@ public class Matrix {
 		int length=dimension*dimension;
 		int[][] initRows=new int[length][length];
 		if(initblock) {
+			
 			for(int block=0;block<length;block++) {
-				OfInt intIterator=IntStream.rangeClosed(1, length).unordered().iterator();
+				int[] baseArray=IntStream.rangeClosed(1, length).toArray();
+				OfInt intIterator=randomInt(baseArray,length/2);
 				for(int index=0;index<length;index++) {
 					int i=index/dimension+block%dimension*dimension;
 					int j=index%dimension+block%dimension*dimension;
@@ -100,11 +102,29 @@ public class Matrix {
 		return new Matrix(initRows);
 	}
 	
+	/**
+	 * 将数组乱序并返回整形迭代器
+	 * @param baseArray	需要乱序的数组
+	 * @param chaos		数组的混乱程度，数值越大输出的序列越无序
+	 * @return
+	 */
+	public static OfInt randomInt(int[] baseArray,int chaos) {
+		Random rand=new Random();
+		for(int i=0;i<chaos;i++) {
+			int m=rand.nextInt(baseArray.length);
+			int n=rand.nextInt(baseArray.length);
+			int tmp=baseArray[m];
+			baseArray[m]=baseArray[n];
+			baseArray[n]=tmp;
+		}
+		return Arrays.stream(baseArray).iterator();
+	}
 	public Matrix clone() {
 		Matrix copy=new Matrix();
 		Cube[] initCubes=new Cube[cubes.length];
 		for(int i=0;i<cubes.length;i++) {
 			if(cubes[i].val>0) {
+				cubes[i].candidates=null;
 				initCubes[i]=cubes[i];
 			}else {
 				initCubes[i]=new Cube(cubes[i].rowIndex,cubes[i].colIndex,cubes[i].blockIndex,cubes[i].val,raw);
@@ -116,10 +136,10 @@ public class Matrix {
 	}
 	
 	/**
-	 * true����Ч��䣬false����Ч���
-	 * @param cube
-	 * @param val
-	 * @return
+	 * 尝试对方格进行试错填充
+	 * @param cube	进行填充的方格
+	 * @param val	填入方格的值
+	 * @return	true：填充成功，false：填充失败
 	 */
 	public boolean fill(Cube cube,Integer val) {
 		int i=cube.rowIndex;
@@ -136,7 +156,7 @@ public class Matrix {
 	}
 	
 	/**
-	 * ������ڵ��ӵ�еķ�֧�ڵ��������з���
+	 * 对未填充的方格节点按照其分支节点数量进行分组
 	 * @return
 	 */
 	public Map<Integer,List<Cube>> groupCube(){
